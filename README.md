@@ -119,11 +119,30 @@ use, applied to a different underlying primitive.
 
 ## Deployment
 
-- Deployed StudioNet address: _pending manual deployment_
+- Deployed StudioNet address: `0x7bF80738dAaFD26d947657B0dE8370c748A91017`
+- Explorer: https://explorer-studio.genlayer.com/address/0x7bF80738dAaFD26d947657B0dE8370c748A91017
 - Studio import: open [studio.genlayer.com](https://studio.genlayer.com) → "Import
-  contract" → paste the deployed address once available.
+  contract" → paste `0x7bF80738dAaFD26d947657B0dE8370c748A91017`.
 
 ## Measured on live consensus
 
-_To be filled in after deployment and integration test runs, mirroring ParametricPool's
-and VisualClaim's "Measured on live consensus" sections._
+`test_full_surface_drives_create_and_resolve_and_reads_every_view` passed against the
+address above. A query asking "Is this page primarily about the Python programming
+language?" across three real, cross-domain sources —
+[en.wikipedia.org/wiki/Python_(programming_language)](https://en.wikipedia.org/wiki/Python_(programming_language)),
+[python.org](https://www.python.org/), and
+[en.wikipedia.org/wiki/Photosynthesis](https://en.wikipedia.org/wiki/Photosynthesis) —
+resolved in a single consensus round (5 validators, `MAJORITY_AGREE`, one round, no
+appeal) to:
+
+```
+source_verdicts: [{index: 0, verdict: "YES"}, {index: 1, verdict: "YES"}, {index: 2, verdict: "NO"}]
+state: CONSENSUS
+resolved_answer: YES
+```
+
+The two Python-related sources were correctly classified `YES`, the unrelated
+Photosynthesis page correctly classified `NO`, and the deterministic 2-of-3 majority
+vote produced the reconciled answer — end to end, on real fetched content, in one
+judged round. Cooldown enforcement and `create_query` input-validation reverts were
+also verified on-chain in the same test run.
