@@ -109,7 +109,7 @@ use, applied to a different underlying primitive.
 
 ## Testing
 
-- **Direct-mode** (`tests/direct/`, `pytest tests/direct/`): 29 tests, no network, no
+- **Direct-mode** (`tests/direct/`, `pytest tests/direct/`): 30 tests, no network, no
   live consensus — fast feedback on every deterministic branch, every failure/abstention
   path, and the worked consumer example, using gltest's built-in `mock_web`/`mock_llm`.
 - **Integration** (`tests/integration/`, `pytest tests/integration/ --network=studionet`):
@@ -119,10 +119,14 @@ use, applied to a different underlying primitive.
 
 ## Deployment
 
-- Deployed StudioNet address: `0x7bF80738dAaFD26d947657B0dE8370c748A91017`
-- Explorer: https://explorer-studio.genlayer.com/address/0x7bF80738dAaFD26d947657B0dE8370c748A91017
+- Deployed StudioNet address: `0xdcbf2fa018BFDfDC118e255C53F40fe00Ae84aCC` (redeployed
+  with the stale-`source_verdicts`-on-error fix; supersedes
+  `0x7bF80738dAaFD26d947657B0dE8370c748A91017`, which had a real bug where a query
+  resolved once successfully and later re-resolved into `ERRORED` kept exposing the
+  prior round's per-source labels — see `SUBMISSION.md`/commit history)
+- Explorer: https://explorer-studio.genlayer.com/address/0xdcbf2fa018BFDfDC118e255C53F40fe00Ae84aCC
 - Studio import: open [studio.genlayer.com](https://studio.genlayer.com) → "Import
-  contract" → paste `0x7bF80738dAaFD26d947657B0dE8370c748A91017`.
+  contract" → paste `0xdcbf2fa018BFDfDC118e255C53F40fe00Ae84aCC`.
 
 ## Measured on live consensus
 
@@ -146,3 +150,18 @@ Photosynthesis page correctly classified `NO`, and the deterministic 2-of-3 majo
 vote produced the reconciled answer — end to end, on real fetched content, in one
 judged round. Cooldown enforcement and `create_query` input-validation reverts were
 also verified on-chain in the same test run.
+
+**Re-verified after the stale-`source_verdicts` fix** against
+`0xdcbf2fa018BFDfDC118e255C53F40fe00Ae84aCC`: all 3 integration tests passed with no
+regressions — the full-surface Python/Photosynthesis case above, the dead-domain
+`FETCH_ERROR` case (`test_resolve_query_with_one_unreachable_source_completes_without_genvm_or_consensus_error`,
+correctly reaching `NO_CONSENSUS`), and the 5-source stress case
+(`test_resolve_query_with_maximum_five_sources_completes_without_genvm_or_consensus_error`,
+correctly reaching `CONSENSUS`/`YES`). Every judged round across every run of this
+contract has completed `SUCCESS`/`ACCEPTED` at the GenVM and consensus level - zero
+fatal errors, zero undetermined rounds. The fix itself (clearing `source_verdicts` on
+a failed re-resolution) is proven by the direct-mode regression test
+`test_resolve_query_clears_stale_source_verdicts_when_a_later_round_errors`, since a
+live network's LLM cannot be scripted to reliably produce unparseable output on
+demand - the same reason no other LLM_ERROR path anywhere in this portfolio is ever
+forced live either.
