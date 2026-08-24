@@ -243,6 +243,43 @@ def test_resolve_query_on_unparseable_output_errors_not_denied_or_consensus(dire
     assert q["resolved_answer"] == ""
 
 
+def test_resolve_query_clears_stale_source_verdicts_when_a_later_round_errors(
+    direct_deploy, direct_vm, direct_owner
+):
+    """
+    Regression for a real review finding: a query resolved once
+    successfully, then re-resolved later (after the cooldown) with
+    unparseable model output, must not keep exposing the FIRST round's
+    per-source labels through get_query. ERRORED means "we don't know
+    right now" - the old verdicts are no longer trustworthy evidence of
+    anything and must be cleared, not left looking like current state.
+    """
+    from datetime import datetime, timedelta
+
+    c = _deploy(direct_deploy, direct_vm, direct_owner)
+    query_id = _create_query(c, direct_vm, direct_owner, resolve_cooldown_seconds=60)
+
+    _mock_sources(direct_vm, {0: "yes", 1: "yes", 2: "no"})
+    _mock_verdict(direct_vm, [{"index": 0, "answer": "YES"}, {"index": 1, "answer": "YES"}, {"index": 2, "answer": "NO"}])
+    c.resolve_query(query_id)
+    first = c.get_query(query_id)
+    assert first["state"] == "CONSENSUS"
+    assert len(first["source_verdicts"]) == 3  # sanity: the first round did populate verdicts
+
+    resolved_at = first["last_resolved_at"]
+    resolved_dt = datetime.fromisoformat(resolved_at.replace("Z", "+00:00"))
+    warp_to(direct_vm, (resolved_dt + timedelta(seconds=61)).isoformat())
+
+    direct_vm.clear_mocks()
+    _mock_sources(direct_vm, {0: "yes", 1: "yes", 2: "no"})
+    direct_vm.mock_llm(r"reconciling what multiple independent web sources say", "not json at all, sorry")
+    c.resolve_query(query_id)
+
+    second = c.get_query(query_id)
+    assert second["state"] == "ERRORED"
+    assert second["source_verdicts"] == [], "a failed re-resolution must not keep exposing the prior round's labels"
+
+
 def test_resolve_query_discards_an_answer_label_not_in_the_candidate_set(direct_deploy, direct_vm, direct_owner):
     c = _deploy(direct_deploy, direct_vm, direct_owner)
     query_id = _create_query(c, direct_vm, direct_owner)

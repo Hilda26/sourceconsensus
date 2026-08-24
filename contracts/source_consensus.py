@@ -354,6 +354,11 @@ label. Respond with ONLY a JSON object, no prose, no code fences:
         if not parsed["ok"]:
             query.state = STATE_ERRORED
             query.resolved_answer = ""
+            # A stale source_verdicts array from an earlier successful round
+            # must never survive a later failed re-resolution - it would
+            # otherwise keep exposing per-source labels that don't
+            # correspond to this (or any) accepted round.
+            query.source_verdicts.clear()
             return
 
         answers_by_index = parsed["answers_by_index"]
