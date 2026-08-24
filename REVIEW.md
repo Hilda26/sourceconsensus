@@ -1,4 +1,4 @@
-# Review response — stale source_verdicts on the error path
+# Review response - stale source_verdicts on the error path
 
 ## Review received
 
